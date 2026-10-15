@@ -1,0 +1,52 @@
+services:
+  model-init:
+    image: python:3.13-slim-bookworm
+    restart: "no"
+    volumes:
+      - ./scripts/download-model.py:/download-model.py:ro
+      - models:/models
+    command:
+      - python
+      - /download-model.py
+      - --repo
+      - ${MODEL_REPO:-altunenes/parakeet-rs}
+      - --revision
+      - ${MODEL_REVISION:-4d2a8bc71f5c896ec40faa59732e6716295edaf2}
+      - --subdir
+      - ${MODEL_SUBDIR-parakeet-ultra}
+      - --output
+      - /models/${MODEL_NAME:-ultra}
+    cpus: 0.5
+    mem_limit: 256m
+
+  bazarr-parakeet:
+    build: .
+    image: bazarr-parakeet:local
+    restart: unless-stopped
+    depends_on:
+      model-init:
+        condition: service_completed_successfully
+    environment:
+      MODEL_DIR: /models/${MODEL_NAME:-ultra}
+      MODEL_ID: ${MODEL_ID:-parakeet-ultra}
+      DATA_DIR: /data
+      INFERENCE_THREADS: ${INFERENCE_THREADS:-1}
+      CHUNK_SECONDS: ${CHUNK_SECONDS:-30}
+      OVERLAP_SECONDS: ${OVERLAP_SECONDS:-2}
+      SUBTITLE_LINE_CHARS: ${SUBTITLE_LINE_CHARS:-42}
+      SUBTITLE_TARGET_CPS: ${SUBTITLE_TARGET_CPS:-20}
+      RAYON_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      RUST_LOG: bazarr_parakeet=info
+    volumes:
+      - models:/models:ro
+      - data:/data
+    ports:
+      - "${LISTEN_ADDRESS:-127.0.0.1}:${PORT:-9000}:9000"
+    cpus: ${CPU_LIMIT:-1.0}
+    mem_limit: ${MEMORY_LIMIT:-4g}
+    stop_grace_period: 2m
+
+volumes:
+  models:
+  data:

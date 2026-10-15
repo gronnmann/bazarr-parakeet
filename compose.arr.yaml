@@ -1,0 +1,12 @@
+# Attach the transcription service to your existing Bazarr Docker network.
+# Example: ARR_NETWORK=arr_default docker compose -f compose.yaml -f compose.arr.yaml up -d --build
+services:
+  bazarr-parakeet:
+    networks:
+      - default
+      - arr
+
+networks:
+  arr:
+    external: true
+    name: ${ARR_NETWORK:?Set ARR_NETWORK to the Docker network used by Bazarr}
